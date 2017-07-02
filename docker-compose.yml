@@ -1,0 +1,58 @@
+version: '3'
+
+services:
+
+  zookeeper:
+    image: zookeeper:3.4.10
+    volumes:
+      - ./data/zookeeper/data:/data:delegated
+      - ./data/zookeeper/datalog:/datalog:delegated
+    ports:
+      - 2181:2181
+
+  db:
+    image: postgres:9.6
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
+  kafka:
+    image: wurstmeister/kafka:0.10.2.1
+    volumes:
+      - ./data/kafka:/kafka:delegated
+    ports:
+      - 9092:9092
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181/kafka
+      - KAFKA_ADVERTISED_HOST_NAME=127.0.0.1
+      - KAFKA_ADVERTISED_PORT=9092
+
+  hbase-master-local:
+    image: noteax/hbase-master-local:1.2.6
+    volumes:
+      - ./data/hbase:/data:delegated
+    ports:
+      - 16000:16000
+      - 16010:16010
+    environment:
+      - MASTER_HOSTNAME=hbase-master-local
+      - ZOOKEEPER_QUORUM=zookeeper:2181
+      - REGIONSERVERS=hbase-local-regionserver
+    depends_on:
+      - zookeeper
+
+  hbase-regionserver-local:
+    image: noteax/hbase-regionserver-local:1.2.6
+    volumes:
+      - ./data/hbase:/data:delegated
+    ports:
+      - 16020:16020
+      - 16030:16030
+    environment:
+      - REGIONSERVER_HOSTNAME=hbase-regionserver-local
+      - ZOOKEEPER_QUORUM=zookeeper:2181
+    depends_on:
+      - zookeeper
